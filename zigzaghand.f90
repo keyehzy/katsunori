@@ -15,6 +15,7 @@ PROGRAM ZIGZAGHAND
   REAL (KIND=8) :: A1,A2,A3,T1,T3     !AUXILIARY
   LOGICAL :: SIGNAL                   !AUX FOR ROOT FINDING
 
+  REAL(KIND=8) :: FTRANS, ENERGY      !FUNCTIONS
   TYPE(GPF) :: MATPLOT                !GNUPLOT EXTENSION
   
   !THIS PROGRAM CALCULATES THE 'CORRECTED' TRANSCENDENTAL FUNCTION F(k,N,p) DEFINED
@@ -29,59 +30,53 @@ PROGRAM ZIGZAGHAND
 
   M = 0        ! SIGN OF THE 'BRANCH': 0 = KATUSNORI, +-1 = MARTINS' BRANCHES
 
-  CALL MATPLOT%MULTIPLOT(2,2)
-  DO M=0,1
+
      !DEFINING THE 'CORRECTED' TRANSCENDENTAL FUNCTION
-     DO I1 = -NGRIDX, NGRIDX         !       GOES OVER THE WHOLE k_x AXIS
-        DO I2 = -NGRIDP, NGRIDP        !       GOES OVER THE QUASI-MOMENTUM p
-           A1 = 2.D0 * DCOS(AKX(I1)/2.D0)
-           A2 = DSIN(AKP(I2)*DBLE(NRIB+1)+DBLE(M)*AKX(I1)/2.D0)
-           !           A2 = DSIN(AKP(I2)*DBLE(NRIB+1))
-           A3 = DSIN(AKP(I2)*DBLE(NRIB))
-           FKNP(I1,I2) = A1 * A2 + A3
-        END DO
+  DO I1 = -NGRIDX, NGRIDX         !       GOES OVER THE WHOLE k_x AXIS
+     DO I2 = -NGRIDP, NGRIDP        !       GOES OVER THE QUASI-MOMENTUM p
+        FKNP(I1,I2) = FTRANS(AKX(I1),AKP(I2),NRIB,M)
      END DO
+  END DO
 
-     !GETTING THE ROOTS BY BISECTION
-     AUX_N = 0 !COUNTER FOR THE NUMBER OF ROOTS
-     DO I2 = -NGRIDX,NGRIDX     
-        T1 = 0.D0
-        T2 = 1
-        T3 = 0.D0
-        IF(FKNP(I2,0).LT.0.D0) THEN
-           SIGNAL = .TRUE.!.FALSE.
-        ELSE
-           SIGNAL = .FALSE.!.TRUE.
+  !GETTING THE ROOTS BY BISECTION
+  AUX_N = 0 !COUNTER FOR THE NUMBER OF ROOTS
+  DO I2 = -NGRIDX,NGRIDX     
+     T1 = 0.D0
+     T2 = 1
+     T3 = 0.D0
+     IF(FKNP(I2,0).LT.0.D0) THEN
+        SIGNAL = .TRUE.!.FALSE.
+     ELSE
+        SIGNAL = .FALSE.!.TRUE.
+     END IF
+     DO I1 = -NGRIDP, NGRIDP
+        IF(SIGNAL .AND. FKNP(I2,I1).LT.T1) THEN
+           ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
+           !     WRITE(*,'((2(I8.2,1X)), F8.5)') I2, T2, ROOTS(I2, T2)
+           T2 = T2+1
+           SIGNAL = .NOT.SIGNAL! .FALSE.               !FLIP TO THE NEGATIVE SIGN
+        ELSE IF(.NOT.SIGNAL .AND. FKNP(I2,I1).GT.T1) THEN
+           ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
+           !    WRITE(*,'((2(I8.2,1X)), F8.5)') I2, T2, ROOTS(I2, T2)
+           T2 = T2+1
+           SIGNAL = .NOT.SIGNAL!.TRUE.                 !FLIP TO THE POSITIVE SIGN
         END IF
-        DO I1 = -NGRIDP, NGRIDP
-           IF(SIGNAL .AND. FKNP(I2,I1).LT.T1) THEN
-              ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
-              !     WRITE(*,'((2(I8.2,1X)), F8.5)') I2, T2, ROOTS(I2, T2)
-              T2 = T2+1
-              SIGNAL = .NOT.SIGNAL! .FALSE.               !FLIP TO THE NEGATIVE SIGN
-           ELSE IF(.NOT.SIGNAL .AND. FKNP(I2,I1).GT.T1) THEN
-              ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
-              !    WRITE(*,'((2(I8.2,1X)), F8.5)') I2, T2, ROOTS(I2, T2)
-              T2 = T2+1
-              SIGNAL = .NOT.SIGNAL!.TRUE.                 !FLIP TO THE POSITIVE SIGN
-           END IF
-        END DO
-        AUX_N(I2) = T2 - 1
-        ! WRITE(*,*) I2, AUX_N(I2)
      END DO
+     AUX_N(I2) = T2 - 1
+     ! WRITE(*,*) I2, AUX_N(I2)
+  END DO
 
-     !CALCULATING THE ENERGY AS IN MARTINS NOTES
-     DO I1 = -NGRIDX, NGRIDX
-        DO I2 = 1, AUX_N(I1)
-           A1 = 4.D0 * DCOS(AKX(I1)/2.D0)**2 + 1.D0
-           A2 = 4.D0 * DCOS(AKX(I1)/2.D0)
-           ENERGY1(I1,I2) =  DSQRT(A1 + A2*DCOS(ROOTS(I1,I2) + DBLE(M)*AKX(I1)/2.D0))
-           ENERGY2(I1,I2) =  -DSQRT(A1 + A2*DCOS(ROOTS(I1,I2) + DBLE(M)*AKX(I1)/2.D0))
-        END DO
+  !CALCULATING THE ENERGY AS IN MARTINS NOTES
+  DO I1 = -NGRIDX, NGRIDX
+     DO I2 = 1, AUX_N(I1)
+        ENERGY1(I1,I2) = ENERGY(AKX(I1), ROOTS(I1,I2), M)
+        ENERGY2(I1,I2) =  -ENERGY(AKX(I1), ROOTS(I1,I2),M)
      END DO
+  END DO
+!  CALL MATPLOT%MULTIPLOT(2,2)
   CALL MATPLOT%PLOT(AKX,ENERGY1,'w l')
   CALL MATPLOT%PLOT(AKX,ENERGY2,'w l')
-END DO
+
 !!$
 !!$  DO I2 = -NGRIDX, NGRIDX
 !!$     WRITE(*,'(65(F18.5,1X))') AKX(I2), (ROOTS(I2,I1),I1=1,AUX_N(I2))
@@ -126,11 +121,20 @@ FUNCTION FTRANS(K,P,N,M) RESULT(J)
   INTEGER :: N, M
   REAL(KIND=8) :: J
   
-  J = 2.D0 * DCOS(K(I1)/2.D0) * (DSIN(P(I2)*DBLE(N+1)+DBLE(M)*K(I1)/2.D0)) + DSIN(P(I2)*DBLE(N))
+  J = 2.D0 * DCOS(K/2.D0) * DSIN(P*DBLE(N+1)+DBLE(M)*K/2.D0) + DSIN(P*DBLE(N))
 
   RETURN
 END FUNCTION FTRANS
 
+FUNCTION ENERGY(K,P,M) RESULT(J)
+  REAL(KIND=8) :: K,P
+  INTEGER :: M
+  REAL(KIND=8) :: J
+  
+  J = DSQRT(4.D0 * DCOS(K/2.D0)**2 + 1.D0 + 4.D0 * DCOS(K/2.D0)*DCOS(P + DBLE(M)*K/2.D0))
+  
+  RETURN
+END FUNCTION ENERGY
 
 
 
