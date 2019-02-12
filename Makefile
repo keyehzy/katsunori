@@ -15,16 +15,16 @@ LIBS =
 #DEBUG = -fsanitize=address
 
 #OBJECTS = interface.o silicene2d.o tightb.o cherndet.o deter.o
-OBJECTS = interface.o zigzaghand.o
+OBJECTS = ogpf.o interface.o zigzaghand.o
 
-MODULES = interface.mod
+MODULES = ogpf.mod interface.mod
 
 DATA = 
 
 .PHONY: clean
 
 zzhand.dat: zigzaghand.exe
-	zigzaghand.exe > saida.dat
+	./zigzaghand.exe > saida.dat
 
 zigzaghand.exe: $(OBJECTS)
 	$(FC) $(LFLAGS) $(OBJECTS) $(DEBUG) -o zigzaghand.exe $(LIBS)
