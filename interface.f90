@@ -2,9 +2,9 @@ MODULE interface
 
   IMPLICIT NONE
 
-  INTEGER, PARAMETER :: NRIB = 2                !       WIDTH OF THE ZIGZAG NANORIBBON
-  INTEGER, PARAMETER :: NGRIDX = 512             !       NUMBER OF POINTS IN THE kx AXIS
-  INTEGER, PARAMETER :: NGRIDP = 4096 !             !       NUMBER OF POINTS IN THE p AXIS
+  INTEGER, PARAMETER :: NRIB = 1                !       WIDTH OF THE ZIGZAG NANORIBBON
+  INTEGER, PARAMETER :: NGRIDX = 512           !       NUMBER OF POINTS IN THE kx AXIS
+  INTEGER, PARAMETER :: NGRIDP = 512 !             !       NUMBER OF POINTS IN THE p AXIS
 
   REAL (KIND=8), PARAMETER  :: PI = DACOS(-1.D0)                         !    3.1415...
 

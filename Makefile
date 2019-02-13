@@ -9,8 +9,9 @@ FC = gfortran
 #LFLAGS = -O3 -mcmodel=medium
 #LFLAGS = -O0 -ggdb
 
-#LIBS = -lgomp /usr/lib64/liblapack.a /usr/lib64/libblas.a
-LIBS = 
+#LIBS = -lgomp /usr/lib/liblapack.a /usr/lib/libblas.a
+LIBS = -lgomp C:/cygwin64/lib/liblapack.a C:/cygwin64/lib/libblas.a
+#LIBS = 
 
 #DEBUG = -fsanitize=address
 
