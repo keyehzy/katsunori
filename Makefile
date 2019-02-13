@@ -16,9 +16,9 @@ LIBS = -lgomp C:/cygwin64/lib/liblapack.a C:/cygwin64/lib/libblas.a
 #DEBUG = -fsanitize=address
 
 #OBJECTS = interface.o silicene2d.o tightb.o cherndet.o deter.o
-OBJECTS = ogpf.o interface.o zigzaghand.o
+OBJECTS = ogpf.o interface.o my_lib.o zigzaghand.o
 
-MODULES = ogpf.mod interface.mod
+MODULES = ogpf.mod interface.mod my_lib.mod
 
 DATA = 
 

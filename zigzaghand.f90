@@ -1,6 +1,7 @@
 PROGRAM ZIGZAGHAND
   USE OGPF
   USE INTERFACE
+  USE MY_LIB, ONLY: TRISECT, FTRANS, ENERGY, WRITE_VECTOR, WRITE_VECTOR_MATRIX
   
   IMPLICIT NONE
 
@@ -18,8 +19,6 @@ PROGRAM ZIGZAGHAND
   REAL (KIND=8) :: A1,A2,A3,T1,T3,R     !AUXILIARY
   LOGICAL :: SIGNAL                   !AUX FOR ROOT FINDING
 
-  EXTERNAL FTRANS
-  REAL(KIND=8) :: FTRANS, ENERGY      !FUNCTIONS
   TYPE(GPF) :: MATPLOT                !GNUPLOT EXTENSION
   
   !THIS PROGRAM CALCULATES THE 'CORRECTED' TRANSCENDENTAL FUNCTION F(k,N,p) DEFINED
@@ -60,21 +59,16 @@ PROGRAM ZIGZAGHAND
         IF(SIGNAL .AND. FKNP(I2,I1).LT.T1) THEN
            CALL TRISECT(FTRANS, AKX(I2), NRIB, M, AKP(I1-1), AKP(I1),R)
            ROOTS(I2,T2) = R
-           !ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
-           !     WRITE(*,'((2(I8.2,1X)), F8.5)') I2, T2, ROOTS(I2, T2)
            T2 = T2+1
            SIGNAL = .NOT.SIGNAL! .FALSE.               !FLIP TO THE NEGATIVE SIGN
         ELSE IF(.NOT.SIGNAL .AND. FKNP(I2,I1).GT.T1) THEN
            CALL TRISECT(FTRANS, AKX(I2), NRIB, M, AKP(I1-1), AKP(I1), R)
            ROOTS(I2,T2) = R
-           !ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
-           !    WRITE(*,'((2(I8.2,1X)), F8.5)') I2, T2, ROOTS(I2, T2)
            T2 = T2+1
            SIGNAL = .NOT.SIGNAL!.TRUE.                 !FLIP TO THE POSITIVE SIGN
         END IF
      END DO
      AUX_N(I2) = T2 - 1
-     ! WRITE(*,*) I2, AUX_N(I2)
   END DO
 
   !CALCULATING THE ENERGY AS IN MARTINS NOTES
@@ -86,16 +80,33 @@ PROGRAM ZIGZAGHAND
   END DO
 
   OPEN(UNIT=1,FILE='bandsN=1.dat',STATUS='OLD', ACTION='READ')
-
   DO I1=1,9
      READ(1,*) REF(I1), (REFERENCE(I1,I2),I2=1,8)
   END DO
   
   CLOSE(1)          
 
-  CALL MATPLOT%MULTIPLOT(2,1)
-  CALL MATPLOT%PLOT(AKX,ENERGY1,'w l')
+
+  CALL MATPLOT%OPTIONS('set xrange[0:3.15]; set yrange[0:3]')
+  CALL MATPLOT%MULTIPLOT(1,2)
+  CALL MATPLOT%PLOT(AKX(0:NGRIDX),ENERGY1(0:NGRIDX,:),'w l')
   CALL MATPLOT%PLOT(REF,REFERENCE,'w l')
+
+  OPEN(UNIT=1,FILE='./results/new/zzhand.dat',STATUS='UNKNOWN')
+  OPEN(UNIT=2,FILE='./results/new/energy1dat',STATUS='UNKNOWN')
+  OPEN(UNIT=3,FILE='./results/new/energy2.dat',STATUS='UNKNOWN')
+  OPEN(UNIT=4,FILE='./results/new/ROOTS.dat',STATUS='UNKNOWN')
+
+  CALL WRITE_VECTOR_MATRIX(1, AKX, FKNP)
+  CALL WRITE_VECTOR_MATRIX(2, AKX, ENERGY1)
+  CALL WRITE_VECTOR_MATRIX(3, AKX, ENERGY2)
+  CALL WRITE_VECTOR_MATRIX(4, AKX, ROOTS)
+  
+  CLOSE(1)
+  CLOSE(2)
+  CLOSE(3)
+  CLOSE(4)
+  
 !  CALL MATPLOT%PLOT(AKX,ENERGY2,'w l')
 
 !!$
@@ -136,148 +147,3 @@ PROGRAM ZIGZAGHAND
 100 FORMAT(65(F8.5,1X))
 
 END PROGRAM ZIGZAGHAND
-
-FUNCTION FTRANS(K, P, N, M) RESULT(J)
-  REAL(KIND=8) :: K, P
-  INTEGER :: N, M
-  REAL(KIND=8) :: J
-  
-  J = 2.D0 * DCOS(K/2.D0) * DSIN(P*DBLE(N+1)+DBLE(M)*K/2.D0) + DSIN(P*DBLE(N))
-
-  RETURN
-END FUNCTION FTRANS
-
-FUNCTION ENERGY(K, P, M) RESULT(J)
-  REAL(KIND=8) :: K,P
-  INTEGER :: M
-  REAL(KIND=8) :: J
-  
-  J = DSQRT(4.D0 * DCOS(K/2.D0)**2 + 1.D0 + 4.D0 * DCOS(K/2.D0)*DCOS(P + DBLE(M)*K/2.D0))
-  
-  RETURN
-END FUNCTION ENERGY
-
-RECURSIVE SUBROUTINE TRISECT(F, K, N, M, LOWER, UPPER, R)
-  INTEGER :: N, M
-  REAL(KIND=8) :: K
-  
-  REAL(KIND=8) :: F, LOWER, UPPER, R, A, B, IA, IB, SEP
-  REAL(KIND=8) :: FA, FB, ERROR, DELTA
-
-  A = LOWER
-  B = UPPER
-  
-  DELTA = 1.D-15
-
-  PRINT *, 'STARTING TRISECT ROUTINE WITH PARAMETER:'
-  PRINT '(A4,F8.5,1X,A4,I8.5,1X,A4,I8.5)', 'K = ', K, 'N = ', N, 'M = ', M
-  PRINT*,
-
-  FA = F(K,A,N,M)
-  FB = F(K,B,N,M)
-  ERROR = B-A
-
-  IF(ERROR .LE. DELTA) THEN
-     R = A
-     PRINT *, '----------PRECISION REACHED, EXITING ROUTINE.------------'
-     RETURN
-  END IF
-
-  PRINT '(A4,F18.15,1X,A4,F18.15)', 'A = ',A ,'B = ', B
-  PRINT '(A7,F18.15,1X,A7,F18.15)', 'F(A) = ',F(K,A,N,M) ,'F(B)= ', F(K,B,N,M)
-
-  SEP = ERROR/3.D0
-  IA = A + SEP
-  IB = B - SEP
-  
-  PRINT '(A12,F18.15)', 'SEPARATOR = ',SEP
-  PRINT '(A5,F18.15,1X,A5,F18.15)', 'IA = ',IA ,'IB = ', IB
-  PRINT '(A8,F18.15,1X,A8,F18.15)', 'F(IA) = ',F(K,IA,N,M) ,'F(IB)= ', F(K,IB,N,M)
-
-  IF(ABS(SIGN(1.D0,F(K,IA,N,M)) - SIGN(1.D0,F(K,A,N,M))) .GE. 1.D-15) THEN
-     PRINT *,
-     CALL TRISECT(F, K, N, M, A, IA, R)
-  ELSE IF(ABS(SIGN(1.D0,F(K,IB,N,M)) - SIGN(1.D0,F(K,B,N,M))) .GE. 1.D-15 ) THEN
-     PRINT *,
-     CALL TRISECT(F, K, N, M, IB, B, R)
-  ELSE
-     PRINT *,
-     CALL TRISECT(F, K, N, M, IA, IB, R)
-  END IF
-
-  RETURN
-  
-END SUBROUTINE TRISECT
-
-
-
-
-
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$ SAME CALCULATIONS FOR THE EXPRESSION IN KATSUNORI
-!!$  DO I1 = -NGRIDX, NGRIDX         !       GOES OVER THE WHOLE k_x AXIS
-!!$     DO I2 = 0, NGRIDP        !       GOES OVER THE QUASI-MOMENTUM p
-!!$        A1 = 2.D0 * DCOS(AKX(I1)/2.D0)
-!!$        A2 = DSIN(AKP(I2)*DBLE(NRIB+1))
-!!$        A3 = DSIN(AKP(I2)*DBLE(NRIB))
-!!$        FK0(I1,I2) = A1 * A2 + A3
-!!$     END DO
-!!$  END DO
-!!$  
-!!$  DO I2 = -NGRIDX,NGRIDX     
-!!$     T1 = 0.D0
-!!$     T2 = 1
-!!$     T3 = 0.D0
-!!$     SIGNAL = .TRUE.     
-!!$     DO I1 = 0, NGRIDP
-!!$        IF(SIGNAL .AND. FK0(I2,I1).LT.T1) THEN
-!!$           ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
-!!$           T2 = T2+1
-!!$           SIGNAL = .FALSE.               !FLIP TO THE NEGATIVE SIGN
-!!$        ELSE IF(.NOT.SIGNAL .AND. FK0(I2,I1).GT.T1) THEN
-!!$           ROOTS(I2,T2) = 0.5D0*AKP(I1) + 0.5D0*AKP(I1-1)
-!!$           T2 = T2+1
-!!$           SIGNAL = .TRUE.                 !FLIP TO THE POSITIVE SIGN
-!!$        END IF
-!!$     END DO
-!!$  END DO
-!!$  DO I1 = -NGRIDX,NGRIDX
-!!$     DO I2 = 1,NRIB
-!!$        A1 = 4.D0 * DCOS(AKX(I1)/2.D0)**2 + 1.D0
-!!$        A2 = 4.D0 * DCOS(AKX(I1)/2.D0)
-!!$        ENERGY1_0(I1,I2) =  DSQRT(A1 + A2*DCOS(ROOTS(I1,I2)))
-!!$        ENERGY2_0(I1,I2) =  -DSQRT(A1 + A2*DCOS(ROOTS(I1,I2)))
-!!$     END DO
-!!$  END DO
-!!$
-!!$  OPEN(UNIT=3, FILE='energy1_0.dat',STATUS='UNKNOWN')
-!!$  OPEN(UNIT=4, FILE='energy2_0.dat',STATUS='UNKNOWN')
-!!$  DO I1 = 0,NGRIDX
-!!$     WRITE(3,'(10(F8.5,1X))') AKX(I1),(ENERGY1_0(I1,I2),I2=1,NRIB)
-!!$     WRITE(4,'(10(F8.5,1X))') AKX(I1),(ENERGY2_0(I1,I2),I2=1,NRIB)
-!!$  END DO
-!!$
-!!$  DO I1 = -NGRIDX,-1
-!!$     WRITE(3,'(3(F8.5,1X))') AKX(I1),(ENERGY1_0(I1,I2),I2=1,NRIB)
-!!$     WRITE(4,'(3(F8.5,1X))') AKX(I1),(ENERGY2_0(I1,I2),I2=1,NRIB)
-!!$  END DO
-!!$  CLOSE(3)
-!!$  CLOSE(4)
-!!$
-!!$  OPEN(UNIT=4,FILE='roots_0.dat',STATUS='UNKNOWN') !8 roots for each k OK
-!!$  DO I1 = 1,NRIB
-!!$     WRITE(4,'(65(F8.5))') 0.D0,(ROOTS(I2,I1),I2=0,NGRIDX)
-!!$  END DO
-!!$  CLOSE(4)
-!!$
-!!$  OPEN(UNIT=1,FILE='zzhand_0.dat',STATUS='UNKNOWN')
-!!$  DO I1 = 0, NGRIDP
-!!$     WRITE(1,100)AKP(I1),(FK0(I2,I1),I2=0,NGRIDX)
-!!$     !WRITE(6,*)AKP(I1),(FKNP(I2,I1),I2=0,NGRIDX)
-!!$  END DO
-!!$  CLOSE(1)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
