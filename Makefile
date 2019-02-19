@@ -10,8 +10,8 @@ FC = gfortran
 #LFLAGS = -O0 -ggdb
 
 #LIBS = -lgomp /usr/lib/liblapack.a /usr/lib/libblas.a
-LIBS = -lgomp C:/cygwin64/lib/liblapack.a C:/cygwin64/lib/libblas.a
-#LIBS = 
+#LIBS = -lgomp C:/cygwin64/lib/liblapack.a C:/cygwin64/lib/libblas.a
+LIBS = 
 
 #DEBUG = -fsanitize=address
 
