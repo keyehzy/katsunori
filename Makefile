@@ -11,14 +11,14 @@ FC = gfortran
 
 #LIBS = -lgomp /usr/lib/liblapack.a /usr/lib/libblas.a
 #LIBS = -lgomp C:/cygwin64/lib/liblapack.a C:/cygwin64/lib/libblas.a
-LIBS = 
+LIBS = /lib64/liblapack.a /lib64/blas_LINUX.a
 
 #DEBUG = -fsanitize=address
 
 #OBJECTS = interface.o silicene2d.o tightb.o cherndet.o deter.o
-OBJECTS = my_lib.o ogpf.o plot.o interface.o zigzaghand.o
+OBJECTS = ogpf.o chebyroots.o plot.o interface.o zigzaghand.o
 
-MODULES = my_lib.mod ogpf.mod plot.mod interface.mod
+MODULES = ogpf.mod chebyroot.mod plot.mod interface.mod
 
 DATA = 
 
@@ -37,7 +37,8 @@ zigzaghand.exe: $(OBJECTS)
 	$(FC) $(FFLAGS) -c $<
 
 clean:
-	rm -f $(OBJECTS) $(MODULES) $(DATA) $(FIGURES) zigzaghand.exe
+#	rm -f $(OBJECTS) $(MODULES) $(DATA) $(FIGURES) zigzaghand.exe
+	rm -f *.o *.mod *.exe
 
 help:
 	@echo "Valid targets:"
